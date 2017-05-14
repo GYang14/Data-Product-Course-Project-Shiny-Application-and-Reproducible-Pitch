@@ -13,39 +13,30 @@ library(shiny)
 
 shinyUI(fluidPage(
   # Application title
-  titlePanel("Stock Trend Viewer"),
-  
+  titlePanel("Economic Data Series Viewer"),
+  h3("User Guide:"),
+  p("1. Enter the series_id of the economic data series of your interest into box:",strong("Primary Economic Data Series")),
+  p("2. Enter the series_id of the economic data series that you want to compare with the primary series into box:",strong("Secondary Economic Data Series")),
+  p("3. Specify the time period of your interest in",strong("Interested Time Window")),
+  p("4. Click the bottom",strong("Submit"),"to see your result:time series chart on the right, scatterplot matrix with correlation at bottom"),
+  p("Note:",br(), 
+    "series_id sample:CPIAUCSL,DEXUSEU, SP500, DGS10, DTB3, and so on",br(), 
+    "please see details of source data and full list of series_ids at",a(href="https://fred.stlouisfed.org/","FRED"),br(),
+    "please see pitch sildes of the app at",a(href="http://rpubs.com/gaugby88/276757","RPubs")),
   # Sidebar with a slider input for number of bins
   sidebarLayout(
     sidebarPanel(
-      textInput("ticker", "Enter stock ticker below:", "SPY"),
-      dateRangeInput("DR","Select interested period",min ="2000-01-01",start = "2017-01-01"),
-      checkboxInput("MA", strong("Show Moving Average (SMA)"), FALSE),
-      numericInput(
-        "MA1",
-        h5("SMA Range Days"),
-        min = 10,
-        max = 200,
-        value = 50,
-        step=10
-      ),
-      checkboxInput("OS", strong("Show RSI(Relative Strength Index)"), FALSE),
-      numericInput(
-        "OS1",
-        h5("RSI Range Days"),
-        min = 14,
-        max = 70,
-        value = 14,
-        step=14
-      ),
-      checkboxInput("TI", strong("Show MACD (Moving Average Convergence Divergence)"), FALSE),
-      checkboxInput("PC", strong("Show On Balance Volume (OBV)"), FALSE),
-      
-      submitButton(text = "Submit")
-      
+      textInput("PD", "Primary Economic Data Series", "DTB3"),
+      textInput("SD", "Secondary Economic Data Series", "DGS10"),
+      dateRangeInput("TW","Interested Time Window",min ="2000-01-01",start = "2015-01-01"),
+      submitButton(text = "Submit"),
+      br(),
+      plotOutput("covplot")
     ),
     
-    # Show a plot of the generated distribution
-    mainPanel(plotOutput("distPlot"))
+    mainPanel(
+      plotOutput("distPlot",height = "800px")
+
+      )
   )
 ))
