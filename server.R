@@ -7,56 +7,49 @@
 
 library(shiny)
 library(quantmod)
-
+library(ggplot2)
 shinyServer(function(input, output) {
+  dataInput <- reactive({
+    PD<-getSymbols(input$PD,src='FRED',auto.assign = FALSE)
+    names(PD)<-"PD"
+    SD<-getSymbols(input$SD,src='FRED',auto.assign = FALSE)
+    names(SD)<-"SD"
+    TimeWindow=paste0(format(input$TW[1], "%Y-%m-%d"),"::",format(input$TW[2], "%Y-%m-%d"))
+    PD<-PD[TimeWindow]
+    SD<-SD[TimeWindow]
+    comb<-merge(PD,SD)
+    return(comb)
+  })
 
   output$distPlot <- renderPlot({
-    ticker0<-input$ticker
-    ticker<-gsub("OPEN","OBEN",gsub("CLOSE","CL0SE",gsub("LOW","L0W",gsub("HIGH","H1GH",gsub("VOL","V0L",gsub("ADJUST","A0JUST",ticker0))))))
-    TimeWindow=paste0(format(input$DR[1], "%Y-%m-%d"),"::",format(input$DR[2], "%Y-%m-%d"))
-    #Get base OHLC price and volume
-    if(ticker==ticker0){
-      data <-
-        getSymbols(
-          ticker0,
-          from = "2000-01-01",
-          to = format(Sys.Date(), "%Y-%m-%d"),
-          auto.assign = FALSE,
-          adjust = TRUE
-        )
-      names(data)<-c("Open","High","Low","Close","Volume","Adjusted")
-      
-    }else{
-      data <-
-        getSymbols(
-          ticker0,
-          from = "2000-01-01",
-          to = format(Sys.Date(), "%Y-%m-%d"),
-          auto.assign = FALSE
-        )
-      names(data)<-c("Open","High","Low","Close","Volume","Adjusted")
-      data<-adjustOHLC(data,use.Adjusted = adjust)
-    }
-    TA_list ='addVo()'
-    
-    if(input$MA==TRUE){
-      TA_list=paste0(TA_list,";","addSMA(n=",input$MA1,")")
-    }
-    if(input$OS==TRUE){
-      TA_list=paste0(TA_list,";","addRSI(n=",input$OS1,")")
-      
-    }
-    if(input$PC==TRUE){
-      TA_list=paste0(TA_list,";","addOBV()")
-      
-    }
-    if(input$TI==TRUE){
-      TA_list=paste0(TA_list,";","addMACD()")
-    }
-    myPars<-chart_pars()
-    myPars$mar<-c(3,10,0,10)
-    chartSeries(data,subset=TimeWindow,name=ticker0,TA=TA_list,theme=chartTheme('white'),pars=myPars)
+    comb<-dataInput()
+    PD<-comb$PD
+    Last<-comb$SD
+    name<-paste("top chart:",input$PD,"; bottom chart:",input$SD)
+    chartSeries(PD, line.type = "b",name=name)
+    addTA(Last,on=NA, type = 'b' )
 
-  },height = 800)
+  })
+  
+  output$covplot<-renderPlot({
+    cov_data<-as.data.frame(dataInput())
+    cov_data<-cov_data[c('PD','SD')]
+    cov_data<-cov_data[complete.cases(cov_data),]
+    names(cov_data)<-c(input$PD,input$SD)
+    panel.cor <- function(x, y, digits=2, prefix="", cex.cor, ...)
+    {
+      usr <- par("usr"); on.exit(par(usr))
+      par(usr = c(0, 1, 0, 1))
+      r <- cor(x, y)
+      txt <- format(c(r, 0.123456789), digits=digits)[1]
+      txt <- paste(prefix, txt, sep="")
+      if(missing(cex.cor)) cex.cor <- 0.4/strwidth(txt)
+      text(0.5, 0.5, txt, cex = cex.cor)
+    }
+    pairs(~.,data=cov_data,
+          lower.panel=panel.smooth,upper.panel=panel.cor,
+          pch=20,main=paste(input$PD,"v.s.",input$SD,"Scatterplot Matrix: Correlation on Top Right"))
+    
+  })
 
 })
